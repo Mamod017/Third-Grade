@@ -1,0 +1,8 @@
+'use strict';
+const CACHE_NAME = 'third-grade-unit-four-zoo-v1';
+const BASE = self.registration.scope;
+const url = p => new URL(p, BASE).toString();
+const FILES = ['', 'index.html', 'manifest.webmanifest', 'The_Third_Grade_Unit_Four_Poster.png', 'icon-192.png', 'icon-512.png', ...Array.from({length:10},(_,i)=>`animal-${i+1}.png`)].map(url);
+self.addEventListener('install', event => event.waitUntil((async()=>{const cache=await caches.open(CACHE_NAME);await cache.addAll(FILES);await self.skipWaiting()})()));
+self.addEventListener('activate', event => event.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('third-grade-unit-four-')&&k!==CACHE_NAME).map(k=>caches.delete(k)));await self.clients.claim()})()));
+self.addEventListener('fetch', event => {const req=event.request, u=new URL(req.url);if(req.method!=='GET'||u.origin!==self.location.origin)return;if(req.mode==='navigate'){event.respondWith((async()=>{try{const res=await fetch(req);if(res&&res.ok){const c=await caches.open(CACHE_NAME);c.put(url('index.html'),res.clone())}return res}catch(e){return (await caches.match(url('index.html')))||(await caches.match(BASE))||new Response('Connect to the internet once to prepare this game for offline use.',{status:503,headers:{'Content-Type':'text/plain; charset=utf-8'}})}})());return}event.respondWith((async()=>{const cached=await caches.match(req);if(cached)return cached;try{const res=await fetch(req);if(res&&res.ok){const c=await caches.open(CACHE_NAME);c.put(req,res.clone())}return res}catch(e){return new Response('',{status:504,statusText:'Offline'})}})())});
